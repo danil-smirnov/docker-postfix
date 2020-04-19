@@ -14,7 +14,7 @@ nodaemon=true
 command=/opt/postfix.sh
 
 [program:rsyslog]
-command=/usr/sbin/rsyslogd -n -c3
+command=/usr/sbin/rsyslogd -n
 EOF
 
 ############
@@ -28,6 +28,7 @@ EOF
 chmod +x /opt/postfix.sh
 postconf -e myhostname=$maildomain
 postconf -F '*/*/chroot = n'
+echo "$maildomain" > /etc/mailname
 
 ############
 # SASL SUPPORT FOR CLIENTS
@@ -126,5 +127,13 @@ EOF
 cat >> /etc/opendkim/SigningTable <<EOF
 *@$maildomain mail._domainkey.$maildomain
 EOF
+chown :opendkim /etc/opendkim/domainkeys
+chmod 770 /etc/opendkim/domainkeys
 chown opendkim:opendkim $(find /etc/opendkim/domainkeys -iname *.private)
 chmod 400 $(find /etc/opendkim/domainkeys -iname *.private)
+
+#############
+#  Custom configuration
+#############
+
+[ -f "/configure.sh" ] && bash /configure.sh
