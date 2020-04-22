@@ -1,17 +1,24 @@
 #!/bin/bash
 
-#judgement
+# judgement
 if [[ -a /etc/supervisor/conf.d/supervisord.conf ]]; then
   exit 0
 fi
 
-#supervisor
+############
+#  supervisor
+############
+
 cat > /etc/supervisor/conf.d/supervisord.conf <<EOF
 [supervisord]
 nodaemon=true
 
 [program:postfix]
 command=/opt/postfix.sh
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 
 [program:rsyslog]
 command=/usr/sbin/rsyslogd -n
@@ -20,31 +27,37 @@ EOF
 ############
 #  postfix
 ############
+
 cat >> /opt/postfix.sh <<EOF
 #!/bin/bash
 service postfix start
 tail -f /var/log/mail.log
 EOF
+
 chmod +x /opt/postfix.sh
+
 postconf -e myhostname=$maildomain
+
 postconf -F '*/*/chroot = n'
+
 echo "$maildomain" > /etc/mailname
 
 ############
 # SASL SUPPORT FOR CLIENTS
-# The following options set parameters needed by Postfix to enable
-# Cyrus-SASL support for authentication of mail clients.
 ############
+
 # /etc/postfix/main.cf
 postconf -e smtpd_sasl_auth_enable=yes
 postconf -e broken_sasl_auth_clients=yes
 postconf -e smtpd_recipient_restrictions=permit_sasl_authenticated,reject_unauth_destination
+
 # smtpd.conf
 cat >> /etc/postfix/sasl/smtpd.conf <<EOF
 pwcheck_method: auxprop
 auxprop_plugin: sasldb
 mech_list: PLAIN LOGIN CRAM-MD5 DIGEST-MD5 NTLM
 EOF
+
 # sasldb2
 echo $smtp_user | tr , \\n > /tmp/passwd
 while IFS=':' read -r _user _pwd; do
@@ -55,32 +68,38 @@ chown postfix.sasl /etc/sasldb2
 ############
 # Enable TLS
 ############
+
 if [[ -n "$(find /etc/postfix/certs -iname *.crt)" && -n "$(find /etc/postfix/certs -iname *.key)" ]]; then
-  # /etc/postfix/main.cf
-  postconf -e smtpd_tls_cert_file=$(find /etc/postfix/certs -iname *.crt)
-  postconf -e smtpd_tls_key_file=$(find /etc/postfix/certs -iname *.key)
-  chmod 400 /etc/postfix/certs/*.*
-  # /etc/postfix/master.cf
-  postconf -M submission/inet="submission   inet   n   -   n   -   -   smtpd"
-  postconf -P "submission/inet/syslog_name=postfix/submission"
-  postconf -P "submission/inet/smtpd_tls_security_level=encrypt"
-  postconf -P "submission/inet/smtpd_sasl_auth_enable=yes"
-  postconf -P "submission/inet/milter_macro_daemon_name=ORIGINATING"
-  postconf -P "submission/inet/smtpd_recipient_restrictions=permit_sasl_authenticated,reject_unauth_destination"
+
+# /etc/postfix/main.cf
+chmod 400 /etc/postfix/certs/*.*
+postconf -e smtpd_tls_cert_file=$(find /etc/postfix/certs -iname *.crt)
+postconf -e smtpd_tls_key_file=$(find /etc/postfix/certs -iname *.key)
+postconf -e smtpd_tls_security_level=may
+postconf -e smtp_tls_security_level=may
+
+# /etc/postfix/master.cf
+postconf -M submission/inet="submission   inet   n   -   n   -   -   smtpd"
+postconf -P "submission/inet/syslog_name=postfix/submission"
+postconf -P "submission/inet/smtpd_tls_security_level=encrypt"
+postconf -P "submission/inet/smtpd_sasl_auth_enable=yes"
+postconf -P "submission/inet/milter_macro_daemon_name=ORIGINATING"
+postconf -P "submission/inet/smtpd_recipient_restrictions=permit_sasl_authenticated,reject_unauth_destination"
+
 fi
 
 #############
 #  opendkim
 #############
 
-if [[ -z "$(find /etc/opendkim/domainkeys -iname *.private)" ]]; then
-  exit 0
-fi
+if [[ -n "$(find /etc/opendkim/domainkeys -iname *.private)" ]]; then
+
 cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
 
 [program:opendkim]
 command=/usr/sbin/opendkim -f
 EOF
+
 # /etc/postfix/main.cf
 postconf -e milter_protocol=2
 postconf -e milter_default_action=accept
@@ -110,6 +129,7 @@ UserID                  opendkim:opendkim
 
 Socket                  inet:12301@localhost
 EOF
+
 cat >> /etc/default/opendkim <<EOF
 SOCKET="inet:12301@localhost"
 EOF
@@ -121,16 +141,21 @@ localhost
 
 *.$maildomain
 EOF
+
 cat >> /etc/opendkim/KeyTable <<EOF
 mail._domainkey.$maildomain $maildomain:mail:$(find /etc/opendkim/domainkeys -iname *.private)
 EOF
+
 cat >> /etc/opendkim/SigningTable <<EOF
 *@$maildomain mail._domainkey.$maildomain
 EOF
+
 chown :opendkim /etc/opendkim/domainkeys
 chmod 770 /etc/opendkim/domainkeys
 chown opendkim:opendkim $(find /etc/opendkim/domainkeys -iname *.private)
 chmod 400 $(find /etc/opendkim/domainkeys -iname *.private)
+
+fi
 
 #############
 #  Custom configuration
