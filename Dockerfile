@@ -1,9 +1,11 @@
-FROM ubuntu:bionic
-MAINTAINER Danil Smirnov
+FROM ubuntu:focal
+MAINTAINER Danil Smirnov <danil@smirnov.la>
 
-RUN apt update && apt install -y supervisor rsyslog postfix sasl2-bin opendkim opendkim-tools \
+RUN apt update && apt install -y supervisor postfix sasl2-bin opendkim opendkim-tools \
     && rm -rf /var/lib/apt/lists/*
 
-ADD install.sh /opt/install.sh
+COPY ./docker-entrypoint.sh /
 
-CMD /opt/install.sh && /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+CMD ["/usr/bin/supervisord"]

@@ -1,50 +1,33 @@
 #!/bin/bash
 
-# judgement
-if [[ -a /etc/supervisor/conf.d/supervisord.conf ]]; then
-  exit 0
-fi
+MAIL_DOMAIN=${MAIL_DOMAIN:=example.com}
+SMTP_USER=${SMTP_USER:=user:password}
 
-############
-#  supervisor
-############
+# Supervisor
 
 cat > /etc/supervisor/conf.d/supervisord.conf <<EOF
 [supervisord]
 nodaemon=true
-
+user=root
 [program:postfix]
-command=/opt/postfix.sh
+command=postfix start-fg
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
-
-[program:rsyslog]
-command=/usr/sbin/rsyslogd -n
 EOF
 
-############
-#  postfix
-############
+# Postfix
 
-cat >> /opt/postfix.sh <<EOF
-#!/bin/bash
-service postfix start
-tail -f /var/log/mail.log
-EOF
-
-chmod +x /opt/postfix.sh
-
-postconf -e myhostname=$maildomain
+postconf -e myhostname=$MAIL_DOMAIN
 
 postconf -F '*/*/chroot = n'
 
-echo "$maildomain" > /etc/mailname
+echo "$MAIL_DOMAIN" > /etc/mailname
 
-############
-# SASL SUPPORT FOR CLIENTS
-############
+postconf -e maillog_file=/dev/stdout
+
+# SASL
 
 # /etc/postfix/main.cf
 postconf -e smtpd_sasl_auth_enable=yes
@@ -59,15 +42,13 @@ mech_list: PLAIN LOGIN CRAM-MD5 DIGEST-MD5 NTLM
 EOF
 
 # sasldb2
-echo $smtp_user | tr , \\n > /tmp/passwd
+echo $SMTP_USER | tr , \\n > /tmp/passwd
 while IFS=':' read -r _user _pwd; do
-  echo $_pwd | saslpasswd2 -p -c -u $maildomain $_user
+  echo $_pwd | saslpasswd2 -p -c -u $MAIL_DOMAIN $_user
 done < /tmp/passwd
 chown postfix.sasl /etc/sasldb2
 
-############
-# Enable TLS
-############
+# TLS
 
 if [[ -n "$(find /etc/postfix/certs -iname *.crt)" && -n "$(find /etc/postfix/certs -iname *.key)" ]]; then
 
@@ -88,14 +69,11 @@ postconf -P "submission/inet/smtpd_recipient_restrictions=permit_sasl_authentica
 
 fi
 
-#############
-#  opendkim
-#############
+# DKIM
 
 if [[ -n "$(find /etc/opendkim/domainkeys -iname *.private)" ]]; then
 
 cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
-
 [program:opendkim]
 command=/usr/sbin/opendkim -f
 EOF
@@ -139,15 +117,15 @@ cat >> /etc/opendkim/TrustedHosts <<EOF
 localhost
 192.168.0.1/24
 
-*.$maildomain
+*.$MAIL_DOMAIN
 EOF
 
 cat >> /etc/opendkim/KeyTable <<EOF
-mail._domainkey.$maildomain $maildomain:mail:$(find /etc/opendkim/domainkeys -iname *.private)
+mail._domainkey.$MAIL_DOMAIN $MAIL_DOMAIN:mail:$(find /etc/opendkim/domainkeys -iname *.private)
 EOF
 
 cat >> /etc/opendkim/SigningTable <<EOF
-*@$maildomain mail._domainkey.$maildomain
+*@$MAIL_DOMAIN mail._domainkey.$MAIL_DOMAIN
 EOF
 
 chown :opendkim /etc/opendkim/domainkeys
@@ -157,8 +135,8 @@ chmod 400 $(find /etc/opendkim/domainkeys -iname *.private)
 
 fi
 
-#############
-#  Custom configuration
-#############
+# Custom configuration
 
-[ -f "/configure.sh" ] && bash /configure.sh
+[[ -f "/configure.sh" ]] && bash /configure.sh
+
+exec "$@"
