@@ -4,9 +4,6 @@ docker-postfix
 Run postfix with smtp authentication (sasldb) in a docker container.  
 TLS and OpenDKIM support are optional.
 
-## Requirement
-+ Docker 1.0
-
 ## Installation
 1. Build image
 
@@ -19,31 +16,41 @@ TLS and OpenDKIM support are optional.
 
 	```bash
 	$ sudo docker run -p 25:25 \
-		-e MAIL_DOMAIN=mail.example.com -e SMTP_USER=user:pwd \
+		-e MAIL_DOMAIN=example.com -e SMTP_USER=user:pwd \
 		--name postfix -d danilsmirnov/postfix
 	# Set multiple user credentials: -e SMTP_USER=user1:pwd1,user2:pwd2,...,userN:pwdN
 	```
-2. Enable OpenDKIM: save your domain key ```.private``` in ```/path/to/domainkeys```
+
+2. Set mail host defferent from mail domain:
 
 	```bash
 	$ sudo docker run -p 25:25 \
-		-e MAIL_DOMAIN=mail.example.com -e SMTP_USER=user:pwd \
+		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
+		--name postfix -d danilsmirnov/postfix
+	```
+
+3. Enable OpenDKIM: save your domain key ```.private``` in ```/path/to/domainkeys```
+
+	```bash
+	$ sudo docker run -p 25:25 \
+		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/domainkeys:/etc/opendkim/domainkeys \
 		--name postfix -d danilsmirnov/postfix
 	```
-3. Enable TLS(587): save your SSL certificates ```.key``` and ```.crt``` to  ```/path/to/certs```
+  # Set DKIM_SELECTOR variable if not okay with default "mail" value
+4. Enable TLS(587): save your SSL certificates ```.key``` and ```.crt``` to  ```/path/to/certs```
 
 	```bash
 	$ sudo docker run -p 587:587 \
-		-e MAIL_DOMAIN=mail.example.com -e SMTP_USER=user:pwd \
+		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/certs:/etc/postfix/certs \
 		--name postfix -d danilsmirnov/postfix
 	```
-4. Add your custom configuration script ```/configure.sh```
+5. Add your custom configuration script ```/configure.sh```
 
 	```bash
 	$ sudo docker run -p 25:25 \
-		-e MAIL_DOMAIN=mail.example.com -e SMTP_USER=user:pwd \
+		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/script:/configure.sh \
 		--name postfix -d danilsmirnov/postfix
 	```
@@ -54,7 +61,7 @@ TLS and OpenDKIM support are optional.
 	postmap /etc/postfix/virtual
 	```
 ## Note
-+ Login credential should be set to (`username@mail.example.com`, `password`) in Smtp Client
++ Login credential should be set to (`username@mail.example.com`, `password`) in SMTP client
 + You can assign the port of MTA on the host machine to one other than 25 ([postfix how-to](http://www.postfix.org/MULTI_INSTANCE_README.html))
 + Read the reference below to find out how to generate domain keys and add public key to the domain's DNS records
 

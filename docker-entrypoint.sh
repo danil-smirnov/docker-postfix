@@ -1,7 +1,9 @@
 #!/bin/bash
 
 MAIL_DOMAIN=${MAIL_DOMAIN:=example.com}
+MAIL_HOST=${MAIL_HOST:-$MAIL_DOMAIN}
 SMTP_USER=${SMTP_USER:=user:password}
+DKIM_SELECTOR=${DKIM_SELECTOR:=mail}
 
 # Supervisor
 
@@ -19,7 +21,8 @@ EOF
 
 # Postfix
 
-postconf -e myhostname=$MAIL_DOMAIN
+postconf -e myhostname=${MAIL_HOST}
+postconf -e myorigin=${MAIL_DOMAIN}
 
 postconf -F '*/*/chroot = n'
 
@@ -42,9 +45,9 @@ mech_list: PLAIN LOGIN CRAM-MD5 DIGEST-MD5 NTLM
 EOF
 
 # sasldb2
-echo $SMTP_USER | tr , \\n > /tmp/passwd
+echo ${SMTP_USER} | tr , \\n > /tmp/passwd
 while IFS=':' read -r _user _pwd; do
-  echo $_pwd | saslpasswd2 -p -c -u $MAIL_DOMAIN $_user
+  echo $_pwd | saslpasswd2 -p -c -u ${MAIL_HOST} $_user
 done < /tmp/passwd
 chown postfix.sasl /etc/sasldb2
 
@@ -116,16 +119,16 @@ cat >> /etc/opendkim/TrustedHosts <<EOF
 127.0.0.1
 localhost
 192.168.0.1/24
-
-*.$MAIL_DOMAIN
+${MAIL_HOST}
+*.${MAIL_DOMAIN}
 EOF
 
 cat >> /etc/opendkim/KeyTable <<EOF
-mail._domainkey.$MAIL_DOMAIN $MAIL_DOMAIN:mail:$(find /etc/opendkim/domainkeys -iname *.private)
+${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN} ${MAIL_DOMAIN}:${DKIM_SELECTOR}:$(find /etc/opendkim/domainkeys -iname *.private)
 EOF
 
 cat >> /etc/opendkim/SigningTable <<EOF
-*@$MAIL_DOMAIN mail._domainkey.$MAIL_DOMAIN
+*@${MAIL_DOMAIN} ${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN}
 EOF
 
 chown :opendkim /etc/opendkim/domainkeys
