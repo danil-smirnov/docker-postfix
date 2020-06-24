@@ -5,7 +5,7 @@ Run postfix with smtp authentication (sasldb) in a docker container.
 TLS and OpenDKIM support are optional.
 
 ## Installation
-1. Build image
+1. Pull image
 
 	```bash
 	$ sudo docker pull danilsmirnov/postfix
@@ -21,7 +21,7 @@ TLS and OpenDKIM support are optional.
 	# Set multiple user credentials: -e SMTP_USER=user1:pwd1,user2:pwd2,...,userN:pwdN
 	```
 
-2. Set mail host defferent from mail domain:
+2. Set mail host defferent from mail domain
 
 	```bash
 	$ sudo docker run -p 25:25 \
@@ -36,8 +36,8 @@ TLS and OpenDKIM support are optional.
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/domainkeys:/etc/opendkim/domainkeys \
 		--name postfix -d danilsmirnov/postfix
+  # Set DKIM_SELECTOR variable if not okay with default "mail" selector
 	```
-  # Set DKIM_SELECTOR variable if not okay with default "mail" value
 4. Enable TLS(587): save your SSL certificates ```.key``` and ```.crt``` to  ```/path/to/certs```
 
 	```bash
