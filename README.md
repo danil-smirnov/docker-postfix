@@ -36,8 +36,9 @@ TLS and OpenDKIM support are optional.
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/domainkeys:/etc/opendkim/domainkeys \
 		--name postfix -d danilsmirnov/postfix
-  # Set DKIM_SELECTOR variable if not okay with default "mail" selector
+	# Set DKIM_SELECTOR variable if not okay with default "mail" selector
 	```
+
 4. Enable TLS(587): save your SSL certificates ```.key``` and ```.crt``` to  ```/path/to/certs```
 
 	```bash
@@ -46,6 +47,7 @@ TLS and OpenDKIM support are optional.
 		-v /path/to/certs:/etc/postfix/certs \
 		--name postfix -d danilsmirnov/postfix
 	```
+
 5. Add your custom configuration script ```/configure.sh```
 
 	```bash
@@ -60,6 +62,7 @@ TLS and OpenDKIM support are optional.
 	echo "mailbox@${MAIL_DOMAIN} address@domain.com" >> /etc/postfix/virtual
 	postmap /etc/postfix/virtual
 	```
+
 ## Note
 + Login credential should be set to (`username@mail.example.com`, `password`) in SMTP client
 + You can assign the port of MTA on the host machine to one other than 25 ([postfix how-to](http://www.postfix.org/MULTI_INSTANCE_README.html))
