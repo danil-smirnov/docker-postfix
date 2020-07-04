@@ -12,7 +12,7 @@ cat > /etc/supervisor/conf.d/supervisord.conf <<EOF
 nodaemon=true
 user=root
 [program:postfix]
-command=postfix start-fg
+command=/opt/postfix.sh
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -20,6 +20,10 @@ stderr_logfile_maxbytes=0
 EOF
 
 # Postfix
+
+echo "#!/bin/bash
+postfix start-fg${FAIL2BAN:+ | tee -a /var/log/mail.log}" > /opt/postfix.sh
+chmod +x /opt/postfix.sh
 
 postconf -e myhostname=${MAIL_HOST}
 postconf -e myorigin=${MAIL_DOMAIN}
@@ -135,6 +139,41 @@ chown :opendkim /etc/opendkim/domainkeys
 chmod 770 /etc/opendkim/domainkeys
 chown opendkim:opendkim $(find /etc/opendkim/domainkeys -iname *.private)
 chmod 400 $(find /etc/opendkim/domainkeys -iname *.private)
+
+fi
+
+# Fail2ban
+
+if [[ -n "${FAIL2BAN}" ]]; then
+
+cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
+[program:fail2ban]
+command=fail2ban-server -f -x -v start
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+[program:cron]
+command=cron -f
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+EOF
+
+echo '[Definition]
+logtarget = STDOUT' > /etc/fail2ban/fail2ban.d/log2stdout.conf
+
+echo '[postfix-sasl]
+enabled = true' > /etc/fail2ban/jail.d/defaults-debian.conf
+
+[[ -n "${FAIL2BAN_BANTIME}" ]] && echo "bantime = ${FAIL2BAN_BANTIME}" >> /etc/fail2ban/jail.d/defaults-debian.conf
+[[ -n "${FAIL2BAN_FINDTIME}" ]] && echo "findtime = ${FAIL2BAN_FINDTIME}" >> /etc/fail2ban/jail.d/defaults-debian.conf
+[[ -n "${FAIL2BAN_MAXRETRY}" ]] && echo "maxretry = ${FAIL2BAN_MAXRETRY}" >> /etc/fail2ban/jail.d/defaults-debian.conf
+
+mkdir -p /run/fail2ban
+
+echo '0 0 * * * root echo "" > /var/log/mail.log' > /etc/cron.d/logrotate
 
 fi
 
