@@ -1,8 +1,8 @@
 docker-postfix
 ==============
 
-Run postfix with smtp authentication (sasldb) in a docker container.  
-TLS and OpenDKIM support are optional.
+Run postfix with SMTP authentication (sasldb) in a Docker container.  
+TLS and OpenDKIM support are optional. Fail2ban can be enabled.
 
 ## Installation
 1. Pull image
@@ -48,7 +48,18 @@ TLS and OpenDKIM support are optional.
 		--name postfix -d danilsmirnov/postfix
 	```
 
-5. Add your custom configuration script ```/configure.sh```
+5. Enable Fail2ban with ```postfix-sasl``` jail to ban brute-force attackers
+
+	```bash
+	$ sudo docker run -p 25:25 \
+		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
+		-e FAIL2BAN=enabled --cap-add NET_ADMIN \
+		--name postfix -d danilsmirnov/postfix
+	# Note: NET_ADMIN capability must be granted to the container
+	# FAIL2BAN_BANTIME, FAIL2BAN_FINDTIME and FAIL2BAN_MAXRETRY could be set as well
+	```
+
+6. Add your custom configuration script ```/configure.sh```
 
 	```bash
 	$ sudo docker run -p 25:25 \
