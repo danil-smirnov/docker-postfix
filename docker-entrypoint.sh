@@ -4,6 +4,7 @@ MAIL_DOMAIN=${MAIL_DOMAIN:=example.com}
 MAIL_HOST=${MAIL_HOST:-$MAIL_DOMAIN}
 SMTP_USER=${SMTP_USER:=user:password}
 DKIM_SELECTOR=${DKIM_SELECTOR:=mail}
+CRON_ENABLED=${LOGS_CLEANUP:=1}
 
 # Supervisor
 
@@ -11,19 +12,56 @@ cat > /etc/supervisor/conf.d/supervisord.conf <<EOF
 [supervisord]
 nodaemon=true
 user=root
-[program:postfix]
-command=/opt/postfix.sh
+EOF
+
+# Cron
+
+if [[ "${CRON_ENABLED,,}" = "1" || "${CRON_ENABLED,,}" = "yes" || "${CRON_ENABLED,,}" = "true" ]]; then
+
+cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
+[program:cron]
+command=cron -f
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
 stderr_logfile_maxbytes=0
 EOF
 
+rm -f /etc/cron.daily/*
+rm -f /etc/cron.d/*
+
+fi
+
 # Postfix
 
-echo "#!/bin/bash
-postfix start-fg${FAIL2BAN:+ | tee -a /var/log/mail.log}" > /opt/postfix.sh
-chmod +x /opt/postfix.sh
+cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
+[program:postfix]
+command=/postfix.sh
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+[program:maillog2stdout]
+command=tail -f /var/log/mail.log
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+EOF
+
+cat > /postfix.sh <<'EOF'
+#!/bin/bash
+trap "postfix stop" SIGINT
+trap "postfix stop" SIGTERM
+trap "postfix reload" SIGHUP
+postfix start
+sleep 5
+while kill -0 "$(cat /var/spool/postfix/pid/master.pid)"; do
+  sleep 5
+done
+EOF
+
+chmod +x /postfix.sh
 
 postconf -e myhostname=${MAIL_HOST}
 postconf -e myorigin=${MAIL_DOMAIN}
@@ -32,7 +70,9 @@ postconf -F '*/*/chroot = n'
 
 echo "$MAIL_DOMAIN" > /etc/mailname
 
-postconf -e maillog_file=/dev/stdout
+postconf -e maillog_file=/var/log/mail.log
+
+echo '0 0 * * * root echo "" > /var/log/mail.log' > /etc/cron.d/maillog
 
 # SASL
 
@@ -83,6 +123,14 @@ if [[ -n "$(find /etc/opendkim/domainkeys -iname *.private)" ]]; then
 cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
 [program:opendkim]
 command=/usr/sbin/opendkim -f
+[program:rsyslog]
+command=/usr/sbin/rsyslogd -n
+[program:syslog2stdout]
+command=tail -f /var/log/syslog
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
 EOF
 
 # /etc/postfix/main.cf
@@ -122,7 +170,9 @@ EOF
 cat >> /etc/opendkim/TrustedHosts <<EOF
 127.0.0.1
 localhost
-192.168.0.1/24
+10.0.0.0/8
+172.16.0.0/12
+192.168.0.0/16
 ${MAIL_HOST}
 *.${MAIL_DOMAIN}
 EOF
@@ -135,10 +185,12 @@ cat >> /etc/opendkim/SigningTable <<EOF
 *@${MAIL_DOMAIN} ${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN}
 EOF
 
-chown :opendkim /etc/opendkim/domainkeys
+chown opendkim:opendkim /etc/opendkim/domainkeys
 chmod 770 /etc/opendkim/domainkeys
 chown opendkim:opendkim $(find /etc/opendkim/domainkeys -iname *.private)
 chmod 400 $(find /etc/opendkim/domainkeys -iname *.private)
+
+echo '0 0 * * * root echo "" > /var/log/syslog' > /etc/cron.d/syslog
 
 fi
 
@@ -149,12 +201,6 @@ if [[ -n "${FAIL2BAN}" ]]; then
 cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
 [program:fail2ban]
 command=fail2ban-server -f -x -v start
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-[program:cron]
-command=cron -f
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
@@ -173,7 +219,7 @@ enabled = true' > /etc/fail2ban/jail.d/defaults-debian.conf
 
 mkdir -p /run/fail2ban
 
-echo '0 0 * * * root echo "" > /var/log/mail.log' > /etc/cron.d/logrotate
+echo '0 0 * * * root echo "" > /var/log/mail.log && fail2ban-client flushlogs' > /etc/cron.d/maillog
 
 fi
 
