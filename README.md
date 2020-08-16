@@ -70,7 +70,7 @@ TLS and OpenDKIM support are optional. Fail2ban can be enabled.
 	E.g., add an alias to forward mail to:
 	```bash
 	postconf -e "virtual_alias_maps = hash:/etc/postfix/virtual"
-	echo "mailbox@${MAIL_DOMAIN} address@domain.com" >> /etc/postfix/virtual
+	echo "mailbox@${MAIL_DOMAIN} address@domain.com" > /etc/postfix/virtual
 	postmap /etc/postfix/virtual
 	```
 
