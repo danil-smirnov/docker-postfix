@@ -2,7 +2,7 @@ docker-postfix
 ==============
 
 Run postfix with SMTP authentication (sasldb) in a Docker container.  
-TLS and OpenDKIM support are optional. Fail2ban can be enabled.
+TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 
 ## Installation
 1. Pull image
@@ -80,6 +80,7 @@ TLS and OpenDKIM support are optional. Fail2ban can be enabled.
 + Read the reference below to find out how to generate domain keys and add public key to the domain's DNS records
 
 ## Reference
++ [Overview of changes and improvements](https://blog.smirnov.la/postfix-in-docker-5bf01e425a47)
 + [Postfix SASL Howto](http://www.postfix.org/SASL_README.html)
 + [How To Install and Configure DKIM with Postfix on Debian Wheezy](https://www.digitalocean.com/community/articles/how-to-install-and-configure-dkim-with-postfix-on-debian-wheezy)
 
