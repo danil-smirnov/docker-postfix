@@ -219,7 +219,7 @@ enabled = true' > /etc/fail2ban/jail.d/defaults-debian.conf
 
 mkdir -p /run/fail2ban
 
-echo '0 0 * * * root echo "" > /var/log/mail.log && fail2ban-client flushlogs' > /etc/cron.d/maillog
+echo '1 0 * * * root echo "Log truncated at $(date +\%s)" > /var/log/mail.log' > /etc/cron.d/maillog
 
 fi
 
