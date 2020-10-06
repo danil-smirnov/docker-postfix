@@ -8,14 +8,14 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 1. Pull image
 
 	```bash
-	$ sudo docker pull danilsmirnov/postfix
+	$ docker pull danilsmirnov/postfix
 	```
 
 ## Usage
 1. Create postfix container with smtp authentication
 
 	```bash
-	$ sudo docker run -p 25:25 \
+	$ docker run -p 25:25 \
 		-e MAIL_DOMAIN=example.com -e SMTP_USER=user:pwd \
 		--name postfix -d danilsmirnov/postfix
 	# Set multiple user credentials: -e SMTP_USER=user1:pwd1,user2:pwd2,...,userN:pwdN
@@ -24,7 +24,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 2. Set mail host defferent from mail domain
 
 	```bash
-	$ sudo docker run -p 25:25 \
+	$ docker run -p 25:25 \
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		--name postfix -d danilsmirnov/postfix
 	```
@@ -32,7 +32,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 3. Enable OpenDKIM: save your domain key ```.private``` in ```/path/to/domainkeys```
 
 	```bash
-	$ sudo docker run -p 25:25 \
+	$ docker run -p 25:25 \
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/domainkeys:/etc/opendkim/domainkeys \
 		--name postfix -d danilsmirnov/postfix
@@ -42,7 +42,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 4. Enable TLS(587): save your SSL certificates ```.key``` and ```.crt``` to  ```/path/to/certs```
 
 	```bash
-	$ sudo docker run -p 587:587 \
+	$ docker run -p 587:587 \
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/certs:/etc/postfix/certs \
 		--name postfix -d danilsmirnov/postfix
@@ -51,7 +51,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 5. Enable Fail2ban with ```postfix-sasl``` jail to ban brute-force attackers
 
 	```bash
-	$ sudo docker run -p 25:25 \
+	$ docker run -p 25:25 \
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-e FAIL2BAN=enabled --cap-add NET_ADMIN \
 		--name postfix -d danilsmirnov/postfix
@@ -62,7 +62,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 6. Add your custom configuration script ```/configure.sh```
 
 	```bash
-	$ sudo docker run -p 25:25 \
+	$ docker run -p 25:25 \
 		-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd \
 		-v /path/to/script:/configure.sh \
 		--name postfix -d danilsmirnov/postfix
