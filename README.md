@@ -29,7 +29,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 		--name postfix -d danilsmirnov/postfix
 	```
 
-3. Enable OpenDKIM: save your domain key ```.private``` in ```/path/to/domainkeys```
+3. Enable OpenDKIM: save your domain key ```mail.private``` in ```/path/to/domainkeys```
 
 	```bash
 	$ docker run -p 25:25 \
@@ -39,7 +39,7 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 	# Set DKIM_SELECTOR variable if not okay with default "mail" selector
 	```
 
-4. Enable TLS(587): save your SSL certificates ```.key``` and ```.crt``` to  ```/path/to/certs```
+4. Enable TLS(587): save your SSL certificates ```mail.example.com.key``` and ```mail.example.com.crt``` to  ```/path/to/certs```
 
 	```bash
 	$ docker run -p 587:587 \
