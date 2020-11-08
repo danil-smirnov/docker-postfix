@@ -97,12 +97,14 @@ chown postfix.sasl /etc/sasldb2
 
 # TLS
 
-if [[ -n "$(find /etc/postfix/certs -iname *.crt)" && -n "$(find /etc/postfix/certs -iname *.key)" ]]; then
+CRT_FILE=/etc/postfix/certs/${MAIL_HOST}.crt
+KEY_FILE=/etc/postfix/certs/${MAIL_HOST}.key
+
+if [[ -f "${CRT_FILE}" && -f "${KEY_FILE}" ]]; then
 
 # /etc/postfix/main.cf
-chmod 400 /etc/postfix/certs/*.*
-postconf -e smtpd_tls_cert_file=$(find /etc/postfix/certs -iname *.crt)
-postconf -e smtpd_tls_key_file=$(find /etc/postfix/certs -iname *.key)
+postconf -e smtpd_tls_cert_file=${CRT_FILE}
+postconf -e smtpd_tls_key_file=${KEY_FILE}
 postconf -e smtpd_tls_security_level=may
 postconf -e smtp_tls_security_level=may
 
@@ -118,7 +120,9 @@ fi
 
 # DKIM
 
-if [[ -n "$(find /etc/opendkim/domainkeys -iname *.private)" ]]; then
+DKIM_FILE=/etc/opendkim/domainkeys/${DKIM_SELECTOR}.private
+
+if [[ -f "${DKIM_FILE}" ]]; then
 
 cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
 [program:opendkim]
@@ -178,7 +182,7 @@ ${MAIL_HOST}
 EOF
 
 cat >> /etc/opendkim/KeyTable <<EOF
-${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN} ${MAIL_DOMAIN}:${DKIM_SELECTOR}:$(find /etc/opendkim/domainkeys -iname *.private)
+${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN} ${MAIL_DOMAIN}:${DKIM_SELECTOR}:${DKIM_FILE}
 EOF
 
 cat >> /etc/opendkim/SigningTable <<EOF
@@ -187,8 +191,8 @@ EOF
 
 chown opendkim:opendkim /etc/opendkim/domainkeys
 chmod 770 /etc/opendkim/domainkeys
-chown opendkim:opendkim $(find /etc/opendkim/domainkeys -iname *.private)
-chmod 400 $(find /etc/opendkim/domainkeys -iname *.private)
+chown opendkim:opendkim ${DKIM_FILE}
+chmod 400 ${DKIM_FILE}
 
 echo '0 0 * * * root echo "" > /var/log/syslog' > /etc/cron.d/syslog
 
