@@ -120,9 +120,8 @@ fi
 
 # DKIM
 
-DKIM_FILE=/etc/opendkim/domainkeys/${DKIM_SELECTOR}.private
-
-if [[ -f "${DKIM_FILE}" ]]; then
+KEY_FILES=$(find /etc/opendkim/domainkeys -iname *.private)
+if [[ -n "${KEY_FILES}" ]]; then
 
 cat >> /etc/supervisor/conf.d/supervisord.conf <<EOF
 [program:opendkim]
@@ -177,9 +176,10 @@ localhost
 10.0.0.0/8
 172.16.0.0/12
 192.168.0.0/16
-${MAIL_HOST}
-*.${MAIL_DOMAIN}
+${MAIL_DOMAIN}
 EOF
+
+DKIM_FILE=/etc/opendkim/domainkeys/${DKIM_SELECTOR}.private
 
 cat >> /etc/opendkim/KeyTable <<EOF
 ${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN} ${MAIL_DOMAIN}:${DKIM_SELECTOR}:${DKIM_FILE}
@@ -189,10 +189,20 @@ cat >> /etc/opendkim/SigningTable <<EOF
 *@${MAIL_DOMAIN} ${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN}
 EOF
 
+for kf in ${KEY_FILES}; do
+if [[ "${kf}" != "${DKIM_FILE}" ]]; then
+kfn="${kf##*._domainkey.}"
+DKIM_DOMAIN="${kfn%.private}"
+echo "${DKIM_DOMAIN}" >> /etc/opendkim/TrustedHosts
+echo "${DKIM_SELECTOR}._domainkey.${DKIM_DOMAIN} ${DKIM_DOMAIN#\*.}:${DKIM_SELECTOR}:${kf}" >> /etc/opendkim/KeyTable
+echo "*@${DKIM_DOMAIN} ${DKIM_SELECTOR}._domainkey.${DKIM_DOMAIN}" >> /etc/opendkim/SigningTable
+fi
+done
+
 chown opendkim:opendkim /etc/opendkim/domainkeys
 chmod 770 /etc/opendkim/domainkeys
-chown opendkim:opendkim ${DKIM_FILE}
-chmod 400 ${DKIM_FILE}
+chown opendkim:opendkim ${KEY_FILES}
+chmod 400 ${KEY_FILES}
 
 echo '0 0 * * * root echo "" > /var/log/syslog' > /etc/cron.d/syslog
 

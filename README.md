@@ -38,6 +38,12 @@ TLS and OpenDKIM support is optional. Fail2ban can be enabled.
 		--name postfix -d danilsmirnov/postfix
 	# Set DKIM_SELECTOR variable if not okay with default "mail" selector
 	```
+	To sign more domains add their key file(s) named `$DKIM_SELECTOR._domainkey.$DOMAIN.private`, e.g.:
+	```bash
+	mail._domainkey.subdomain.example.com.private
+	mail._domainkey.*.example.com.private
+	```
+	(Wildcard subdomain refers to its parent domain's DNS record.)
 
 4. Enable TLS(587): save your SSL certificates ```mail.example.com.key``` and ```mail.example.com.crt``` to  ```/path/to/certs```
 
