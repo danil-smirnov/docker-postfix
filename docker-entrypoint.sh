@@ -82,7 +82,7 @@ postconf -e broken_sasl_auth_clients=yes
 postconf -e smtpd_recipient_restrictions=permit_sasl_authenticated,reject_unauth_destination
 
 # smtpd.conf
-cat >> /etc/postfix/sasl/smtpd.conf <<EOF
+cat > /etc/postfix/sasl/smtpd.conf <<EOF
 pwcheck_method: auxprop
 auxprop_plugin: sasldb
 mech_list: PLAIN LOGIN CRAM-MD5 DIGEST-MD5 NTLM
@@ -142,6 +142,8 @@ postconf -e milter_default_action=accept
 postconf -e smtpd_milters=inet:localhost:12301
 postconf -e non_smtpd_milters=inet:localhost:12301
 
+cp -n /etc/opendkim.conf /etc/opendkim.conf.orig
+cp /etc/opendkim.conf.orig /etc/opendkim.conf
 cat >> /etc/opendkim.conf <<EOF
 AutoRestart             Yes
 AutoRestartRate         10/1h
@@ -149,28 +151,25 @@ UMask                   002
 Syslog                  yes
 SyslogSuccess           Yes
 LogWhy                  Yes
-
 Canonicalization        relaxed/simple
-
 ExternalIgnoreList      refile:/etc/opendkim/TrustedHosts
 InternalHosts           refile:/etc/opendkim/TrustedHosts
 KeyTable                refile:/etc/opendkim/KeyTable
 SigningTable            refile:/etc/opendkim/SigningTable
-
 Mode                    sv
 PidFile                 /var/run/opendkim/opendkim.pid
 SignatureAlgorithm      rsa-sha256
-
 UserID                  opendkim:opendkim
-
 Socket                  inet:12301@localhost
 EOF
 
+cp -n /etc/default/opendkim /etc/default/opendkim.orig
+cp /etc/default/opendkim.orig /etc/default/opendkim
 cat >> /etc/default/opendkim <<EOF
 SOCKET="inet:12301@localhost"
 EOF
 
-cat >> /etc/opendkim/TrustedHosts <<EOF
+cat > /etc/opendkim/TrustedHosts <<EOF
 127.0.0.1
 localhost
 10.0.0.0/8
@@ -181,11 +180,11 @@ EOF
 
 DKIM_FILE=/etc/opendkim/domainkeys/${DKIM_SELECTOR}.private
 
-cat >> /etc/opendkim/KeyTable <<EOF
+cat > /etc/opendkim/KeyTable <<EOF
 ${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN} ${MAIL_DOMAIN}:${DKIM_SELECTOR}:${DKIM_FILE}
 EOF
 
-cat >> /etc/opendkim/SigningTable <<EOF
+cat > /etc/opendkim/SigningTable <<EOF
 *@${MAIL_DOMAIN} ${DKIM_SELECTOR}._domainkey.${MAIL_DOMAIN}
 EOF
 
@@ -193,6 +192,8 @@ for kf in ${KEY_FILES}; do
 if [[ "${kf}" != "${DKIM_FILE}" ]]; then
 kfn="${kf##*._domainkey.}"
 DKIM_DOMAIN="${kfn%.private}"
+kfs="${kf%%._domainkey.*}"
+DKIM_SELECTOR="${kfs##*/}"
 echo "${DKIM_DOMAIN}" >> /etc/opendkim/TrustedHosts
 echo "${DKIM_SELECTOR}._domainkey.${DKIM_DOMAIN} ${DKIM_DOMAIN#\*.}:${DKIM_SELECTOR}:${kf}" >> /etc/opendkim/KeyTable
 echo "*@${DKIM_DOMAIN} ${DKIM_SELECTOR}._domainkey.${DKIM_DOMAIN}" >> /etc/opendkim/SigningTable
@@ -236,6 +237,10 @@ mkdir -p /run/fail2ban
 echo '1 0 * * * root echo "Log truncated at $(date +\%s)" > /var/log/mail.log' > /etc/cron.d/maillog
 
 fi
+
+# Rsyslogd does not start fix
+
+rm -f /var/run/rsyslogd.pid
 
 # Custom configuration
 
