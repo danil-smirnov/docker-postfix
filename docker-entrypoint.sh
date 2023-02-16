@@ -70,6 +70,8 @@ postconf -F '*/*/chroot = n'
 
 echo "$MAIL_DOMAIN" > /etc/mailname
 
+postconf -e "mydestination = \$myhostname, /etc/mailname, localhost, localhost.localdomain"
+
 postconf -e maillog_file=/var/log/mail.log
 
 echo '0 0 * * * root echo "" > /var/log/mail.log' > /etc/cron.d/maillog
