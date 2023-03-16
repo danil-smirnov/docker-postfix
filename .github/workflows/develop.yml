@@ -30,8 +30,8 @@ jobs:
       - name: Run the image
         run: >
           docker run --name postfix -d -p 25:25
-        	-e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd
-	        -e FAIL2BAN=enabled --cap-add NET_ADMIN
+          -e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd
+          -e FAIL2BAN=enabled --cap-add NET_ADMIN
           danilsmirnov/postfix:${{ github.sha }}
       - name: Check the status
         run: |
