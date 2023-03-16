@@ -42,3 +42,49 @@ jobs:
             echo "$status"
             exit 1
           fi
+
+  test-ubuntu-20:
+    runs-on: ubuntu-20.04
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Run the image
+        run: >
+          docker run --name postfix -d -p 25:25
+          -e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd
+          -e FAIL2BAN=enabled --cap-add NET_ADMIN
+          danilsmirnov/postfix:${{ github.sha }}
+      - name: Check the status
+        run: |
+          sleep 10
+          status=$(docker exec postfix supervisorctl status)
+          if echo "$status" | grep -v RUNNING > /dev/null; then
+            echo "$status"
+            exit 1
+          fi
+
+  test-ubuntu-18:
+    runs-on: ubuntu-18.04
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Run the image
+        run: >
+          docker run --name postfix -d -p 25:25
+          -e MAIL_DOMAIN=example.com -e MAIL_HOST=mail.example.com -e SMTP_USER=user:pwd
+          -e FAIL2BAN=enabled --cap-add NET_ADMIN
+          danilsmirnov/postfix:${{ github.sha }}
+      - name: Check the status
+        run: |
+          sleep 10
+          status=$(docker exec postfix supervisorctl status)
+          if echo "$status" | grep -v RUNNING > /dev/null; then
+            echo "$status"
+            exit 1
+          fi
