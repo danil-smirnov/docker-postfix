@@ -38,6 +38,7 @@ jobs:
         run: |
           sleep 10
           status=$(docker exec postfix supervisorctl status)
+          echo "$status"
           echo "$status" | grep -v RUNNING > /dev/null
           if [ "$?" -eq 0 ]; then
             echo "$status"
