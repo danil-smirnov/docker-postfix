@@ -36,6 +36,5 @@ jobs:
       - name: Check the status
         run: |
           status=$(docker exec postfix supervisorctl status)
-          echo "$status"
-          rc=$(echo "$status" | grep -v RUNNING)
-          [ "$rc" = 0 ] && exit 1
+          echo "$status" | grep -v RUNNING > /dev/null
+          [ "$?" -eq 0 ] && { echo "$status"; exit 1; }
